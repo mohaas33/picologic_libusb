@@ -219,7 +219,7 @@ int main(void)
         dev_expected = dev;    
         hDevice_expected = handle;    
     }    
-/*
+
     e = libusb_get_configuration(handle,&config2);    
     if(e!=0)    
     {    
@@ -269,7 +269,7 @@ int main(void)
         return -1;    
     }    
     else    
-        printf("\nClaimed Interface\n");    */
+        printf("\nClaimed Interface\n");    
 
     //active_config(dev_expected,hDevice_expected);    
 
