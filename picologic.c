@@ -103,12 +103,45 @@ struct libusb_endpoint_descriptor* active_config(struct libusb_device *dev,struc
     return endpoint;    
 }    
 
-int main(void)    
+int main(int argc, char **argv)    
 {
-
+    int tsec=100;
+   printf("Setting parameters for the readout");
+    if(argc==1){
+        printf("Default arguments supplied: \n");
+      printf("- output File name: %s\n", filename);
+      printf("- measurement interval: %d [sec]\n", tsec);
+    }else{
+       if( argc == 3 ) {
+           strcpy(filename, argv[1]);
+          tsec = atoi(argv[2]);
+          printf("The arguments supplied: \n");
+          printf("- output File name: %s\n", filename);
+          printf("- measurement interval: %d [sec]\n", tsec);
+          //printf("The arguments supplied: is %s\n", argv[2]);
+       }
+       else if( argc > 3 ) {
+          printf("Too many arguments supplied.\n");
+       }
+       else {
+          printf("Two arguments expected.\n");
+       }
+    }
+   printf("\n");
+    
     FILE* fptr;
     if(savefile){
-        fptr=fopen(filename, "a+");
+        
+        if( access( filename, F_OK ) == 0 ) {
+            // file exists
+            printf("File %s Exists !! \n",filename);
+            printf("Please use different File name. \n",filename);
+            return 1;
+        } else {
+            // file doesn't exist
+            printf("Create NEW File: %s \n",filename);
+            fptr=fopen(filename, "a+");
+        }
     }
     
     int r = 1;    
@@ -377,7 +410,7 @@ int main(void)
             struct  tm tm = *localtime(&T);
             printf("%04d%02d%02d %02d%02d%02d \n", tm.tm_year+1990, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
         }
-	if (i>=100) break;        
+	if (i>=tsec) break;        
     }    
     
     //swapped = (num>>8) | (num<<8);
