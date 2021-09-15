@@ -16,6 +16,8 @@
 #include <unistd.h>
 #endif
 
+void readConfiguration(double *amp, double *bias);
+
 long long current_timestamp() {
     struct timeval te; 
     gettimeofday(&te, NULL); // get current time
@@ -102,6 +104,60 @@ struct libusb_endpoint_descriptor* active_config(struct libusb_device *dev,struc
     libusb_free_config_descriptor(NULL);    
     return endpoint;    
 }    
+#define MAX_LINE_LENGTH 80
+void readConfiguration(double *amp, double *bias){
+    //File with configuration of each pA
+    char *path = "./config/calibration.conf";
+    int start_line = 0;
+
+    char line[MAX_LINE_LENGTH] = {0};
+    unsigned int line_count = 0;
+    
+    /* Open file */
+    FILE *file = fopen(path, "r");
+    
+    if (!file)
+    {
+        perror(path);
+    }
+    
+    /* Get each line until there are none left */
+    while (fgets(line, MAX_LINE_LENGTH, file))
+    {
+        /* Print each line */
+        printf("line[%06d]: %s", ++line_count, line);
+        
+        /* Add a trailing newline to lines that don't already have one */
+        if (line[strlen(line) - 1] != '\n')
+            printf("\n");
+	    int init_size = strlen(line);
+	    char delim[] = " ";
+
+        int wordN = 0;
+	    char *ptr = strtok(line, delim);
+	    while(ptr != NULL)
+	    {
+		    printf("%d %d '%s'\n", line_count,wordN, ptr);
+            if(wordN==3){
+                amp[line_count-1]=atof(ptr);
+            }
+            if(wordN==4){
+                bias[line_count-1]=atof(ptr);
+            }
+		    ptr = strtok(NULL, delim);
+            wordN++;
+	    }
+
+
+    }
+    
+    /* Close file */
+    if (fclose(file))
+    {
+        perror(path);
+    }
+}
+
 
 int main(int argc, char **argv)    
 {
@@ -128,7 +184,12 @@ int main(int argc, char **argv)
        }
     }
    printf("\n");
-    
+   double amp[12];
+   double bias[12];
+   readConfiguration(amp,bias);
+   for(int n=0; n<12;n++){
+       printf("%d %f | %f \n",n,amp[n],bias[n]);
+   }
     FILE* fptr;
     if(savefile){
         
@@ -375,9 +436,11 @@ int main(int argc, char **argv)
 			channels[k]=temp-0x8000;
 			//if(i%100==0) 
 			if(savefile==false)
-			    printf("%5.3f ",0.0039*(float)channels[k]);
+			    //printf("%5.3f ",0.0039*(float)channels[k]);
+			    printf("%5.3f ",amp[k]*(float)channels[k]-bias[k]);
 			else
-    			    fprintf(fptr, "%5.3f ",0.0039*(float)channels[k]);
+    			    //fprintf(fptr, "%5.3f ",0.0039*(float)channels[k]);
+    			    fprintf(fptr, "%5.3f ",amp[k]*(float)channels[k]-bias[k]);
                         k++;
 			if(k==12)            //number of channels
 			{
