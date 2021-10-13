@@ -5,7 +5,7 @@ This repository contain scripts for reading out PicoLogic PA125-24 12 channel fl
 `sudo apt-get install libusb-1.0.0`
 The library is in: `<libusb-1.0/libusb.h>`
 - Build the code:
-`gcc -o test.o -Wformat=0 -Wno-incompatible-pointer-types picologic.c -lusb-1.0`
+`gcc -o picologic -Wformat=0 -Wno-incompatible-pointer-types picologic.c -lusb-1.0`
 - Run the code:
 `sudo ./test.o DATA.txt 10`
 it takes as an input:
@@ -17,3 +17,16 @@ it takes as an input:
     - On the fly plotting of the currents;
     - Set output file name;
     - Set time for recording
+
+## Running
+### **Monitoring**
+
+`./picologic_c.py &`
+It stops when the file is written in the next iteration.
+
+### **Script to write the file**
+
+Takes as an input name of the file and seconds to write down: `./picologic test.txt 10`
+
+
+

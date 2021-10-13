@@ -125,8 +125,8 @@ void readConfiguration(double *amp, double *bias){
     while (fgets(line, MAX_LINE_LENGTH, file))
     {
         /* Print each line */
-        printf("line[%06d]: %s", ++line_count, line);
-        
+        //printf("line[%06d]: %s", ++line_count, line);
+        ++line_count;
         /* Add a trailing newline to lines that don't already have one */
         if (line[strlen(line) - 1] != '\n')
             printf("\n");
@@ -137,7 +137,7 @@ void readConfiguration(double *amp, double *bias){
 	    char *ptr = strtok(line, delim);
 	    while(ptr != NULL)
 	    {
-		    printf("%d %d '%s'\n", line_count,wordN, ptr);
+		    //printf("%d %d '%s'\n", line_count,wordN, ptr);
             if(wordN==3){
                 amp[line_count-1]=atof(ptr);
             }
@@ -239,8 +239,10 @@ int main(int argc, char **argv)
     }    
     printf("\nDevice Count : %d\n-------------------------------\n",cnt);    
 
-    while ((dev = devs[i++]) != NULL)    
+    //while ((dev = devs[i++]) != NULL)    
+    for (int k=0;k<cnt;k++)
     {    
+        dev = devs[k];
         r = libusb_get_device_descriptor(dev, &desc);    
         if (r < 0)    
             {    
@@ -263,41 +265,46 @@ int main(int argc, char **argv)
         printf("\n\tDevice Protocol : %d",desc.bDeviceProtocol);    
         printf("\n\tMax. Packet Size : %d",desc.bMaxPacketSize0);    
         printf("\n\tNo. of Configuraions : %d\n",desc.bNumConfigurations);    
-
-        e = libusb_open(dev,&handle);    
-        printf("return value of openning : %d\n", e);
-        if (e < 0)    
+        
+        if(desc.idVendor == 0x04b4 && desc.idProduct == 0x1003)    
         {    
+            found = 1; 
+            e = libusb_open(dev,&handle);    
+            printf("return value of openning : %d %s \n", e,libusb_error_name(e));
+        
+            if (e < 0)    
+            {    
             printf("error opening device\n");    
             libusb_free_device_list(devs,1);    
             libusb_close(handle);    
             break;    
-        }  
+            }  
 
-        e = libusb_get_string_descriptor_ascii(handle, desc.iManufacturer, (unsigned char*) str1, sizeof(str1));    
-        if (e < 0)    
-        {    
-        libusb_free_device_list(devs,1);    
+            e = libusb_get_string_descriptor_ascii(handle, desc.iManufacturer, (unsigned char*) str1, sizeof(str1));    
+            if (e < 0)    
+            {    
+            libusb_free_device_list(devs,1);    
             libusb_close(handle);    
-            break;    
-        }    
-        printf("\nManufactured : %s",str1);    
+            continue;    
+            }    
+            printf("\nManufactured : %s",str1);    
 
-        e = libusb_get_string_descriptor_ascii(handle, desc.iProduct, (unsigned char*) str2, sizeof(str2));    
-        if(e < 0)    
-        {    
-        libusb_free_device_list(devs,1);    
+            e = libusb_get_string_descriptor_ascii(handle, desc.iProduct, (unsigned char*) str2, sizeof(str2));    
+            if(e < 0)    
+            {    
+            libusb_free_device_list(devs,1);    
             libusb_close(handle);    
-            break;    
-        }    
-        printf("\nProduct : %s",str2);    
-        printf("\n----------------------------------------");    
+            continue;    
+            }    
+        
+            printf("\nProduct : %s",str2);    
+            printf("\n----------------------------------------");    
 
-        if(desc.idVendor == 0x04b4 && desc.idProduct == 0x1003)    
-        {    
-        found = 1;    
-        break;    
-        }    
+ 
+            break;    
+        } else{
+            continue;
+        }   
     }//end of while    
     
     if(found == 0)    
@@ -340,6 +347,7 @@ int main(int argc, char **argv)
 
     libusb_free_device_list(devs, 1);    
 
+    //printf("3 \n");
     if(libusb_kernel_driver_active(handle, 0) == 1)    
     {    
         printf("\nKernel Driver Active");    
@@ -354,6 +362,7 @@ int main(int argc, char **argv)
         }    
     }    
 
+    //printf("4 \n");
     e = libusb_claim_interface(handle, 0);    
     if(e < 0)    
     {    
@@ -369,6 +378,7 @@ int main(int argc, char **argv)
 
     //   Communicate     
 
+    printf("Communicate \n");
     char *my_string;
     unsigned short *data_in;
     int *channels;
@@ -407,65 +417,57 @@ int main(int argc, char **argv)
 
     while(1)	   
     {    
+        //printf("handle=%d",handle);
         e = libusb_bulk_transfer(handle,BULK_EP_OUT,my_string,512,&received,0);     
         if(e==0)    
         {    
             data_in=my_string;	
-            //printf("\nReceived: %d %d\n", e, length);    
             for(j=0; j<256; j++){
-                //printf("i=%d, j=%d, data = %04X, value = %5.3f \n", i, j, data_in[j], 0.0039*(float)( (int)((data_in[j]<<8|data_in[j]>>8)&0xffff)-0x8000 ));
                 
                 if(data_in[j]==0xFEFE && sync_a==0)
-		{
+		        {
                    length=j;
-		    sync_a=1;
-		    k=0;
-                   //i++;
-	           //if(i%100==0)
-		    //printf("%08d. ",i);
-		    //time_t T= time(NULL);
-                   //struct  tm tm = *localtime(&T);
-		    //printf("%04d%02d%02d %02d%02d%02d ", tm.tm_year+1990, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-		    if(savefile==false)
-		        printf("%lld ", current_timestamp());
-		    else
-		        fprintf(fptr, "%lld ", current_timestamp());
+		            sync_a=1;
+		            k=0;
+		            if(savefile==false)
+		                printf("%lld ", current_timestamp());
+		            else
+		                fprintf(fptr, "%lld ", current_timestamp());
                 }
                 else if(sync_a==1){
-			temp=(int)(data_in[j]<<8|data_in[j]>>8)&0xffff;
-			channels[k]=temp-0x8000;
-			//if(i%100==0) 
-			if(savefile==false)
-			    //printf("%5.3f ",0.0039*(float)channels[k]);
-			    printf("%5.3f ",amp[k]*(float)channels[k]-bias[k]);
-			else
-    			    //fprintf(fptr, "%5.3f ",0.0039*(float)channels[k]);
-    			    fprintf(fptr, "%5.3f ",amp[k]*(float)channels[k]-bias[k]);
-                        k++;
-			if(k==12)            //number of channels
-			{
-				sync_a=0;
-				//if(i%100==0)
-				if(savefile==false)
-				    printf("\n");
-				else
-				    fprintf(fptr, "\n");
-				break;
-			}
-		}
+			        temp=(int)(data_in[j]<<8|data_in[j]>>8)&0xffff;
+			        channels[k]=temp-0x8000;
+			        //if(i%100==0) 
+			        if(savefile==false)
+			            //printf("%5.3f ",0.0039*(float)channels[k]);
+			            printf("%5.3f ",amp[k]*(float)channels[k]-bias[k]);
+			        else{
+    			        //fprintf(fptr, "%5.3f ",0.0039*(float)channels[k]);
+    			        fprintf(fptr, "%5.3f ",amp[k]*(float)channels[k]-bias[k]);
+                    }
+                    k++;
+			        if(k==12)            //number of channels
+			        {
+				        sync_a=0;
+				        //if(i%100==0)
+				        if(savefile==false)
+				            printf("\n");
+				        else
+				            fprintf(fptr, "\n");
+				        break;
+			        }
+		        }
 		
 		
-		//printf(" %04X",data_in[j]&0xffff);    //will read a string from lcp2148
-	    }
+		        //printf(" %04X",data_in[j]&0xffff);    //will read a string from lcp2148
+	        }
 	    
-	    i++;
+	        i++;
  
-        }
-        else{
-		printf("\nReceived: %d %d\n", e, length);  
-		return -1; 
-	
-	}
+        }else{
+		    printf("\nReceived: %d %d\n", e, length);  
+		    return -1; 	
+	    }
 	
 	sleep(sleeptime);
 	if(i%5==0){
