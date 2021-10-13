@@ -99,7 +99,7 @@ void readConfiguration(double *amp, double *bias){
     }
 }
 
-void communicate_pAs(libusb_device_handle *handle, double *amp, double *bias, int tsec){
+string communicate_pAs(libusb_device_handle *handle, double *amp, double *bias){
   //   Communicate     
   printf("Communicate \n");
   FILE* fptr;
@@ -129,11 +129,11 @@ void communicate_pAs(libusb_device_handle *handle, double *amp, double *bias, in
   int flaga=0,flagb=0,sync_a=0,k=0;   
   my_string = (unsigned char *)malloc(512);    
   channels = (int *)malloc(64);    
-  int ind = 0;    
+  //int ind = 0;    
   length=2;
   sync_a=0;
   //for(i = 0; i < length; i++) 
-  while(1){
+  //while(1){
     currents_out.clear();
     int e = libusb_bulk_transfer(handle,BULK_EP_OUT,my_string,512,&received,0);     
     if(e==0){    
@@ -177,19 +177,20 @@ void communicate_pAs(libusb_device_handle *handle, double *amp, double *bias, in
 	      }
 
 	    }	
-	    ind++;
+	    //ind++;
     }else{
       printf("\nReceived: %d %d\n", e, length);  
       //return -1; 	
 	  }
-	  sleep(sleeptime);
+	  //sleep(sleeptime);
 
-	  if (ind>=tsec) break;        
-  }  //end of while loop 
+	  //if (ind>=tsec) break;        
+  //}  //end of while loop 
 
   if(savefile){
       fclose(fptr);
   }
+  return currents_out;
 
 }
 
@@ -411,10 +412,15 @@ int main( int argc, char *argv[])
     for ( int i = 0; i < n; i++){
 	    cout << i << " " << hex << setw(3) << int(buffer[i]) << dec;
 	    if ( buffer[i] >= 32 ) cout << "  " << buffer[i];  // printable char
-      communicate_pAs(handle, amp, bias, tsec);
 
 	  }
-
+    if (n>0){
+      string str = communicate_pAs(handle, amp, bias);
+	    sleep(sleeptime);
+      cout<<str<<endl;
+      reply = &str[0];   
+      write (in_fd, reply, strlen(reply) +1);
+    }
     write (in_fd, reply, strlen(reply) +1);
     close (in_fd);
     in_fd = 0;
