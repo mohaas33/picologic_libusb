@@ -6,6 +6,7 @@ This repository contain scripts for reading out PicoLogic PA125-24 12 channel fl
 The library is in: `<libusb-1.0/libusb.h>`
 - Build the code:
 `gcc -o picologic -Wformat=0 -Wno-incompatible-pointer-types picologic.c -lusb-1.0`
+`g++ picologic_server_tcp.cc -Wformat=0 -o picologic_server_tcp -lusb-1.0`
 - Run the code:
 `sudo ./test.o DATA.txt 10`
 it takes as an input:
@@ -19,6 +20,8 @@ it takes as an input:
     - Set time for recording
 
 ## Running
+`./picologic_server_tcp 127.0.0.1`
+
 ### **Monitoring**
 
 `./picologic_c.py &`

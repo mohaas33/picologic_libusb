@@ -23,7 +23,7 @@
 #define MAXLINE (1024*2)
 
 bool savefile = false;
-char filename[] = "data.txt";
+//char filename[] = "data.txt";
 float sleeptime = 1.0; // unit in seconds
 
 int interface_ref = 0;    
@@ -34,10 +34,14 @@ int alt_interface,interface_number;
 
 #define MAX_LINE_LENGTH 80
 
+#include <fstream>
 #include <iostream>
 #include <iomanip>
 
 using namespace std;
+
+string filename = "data.txt";
+
 
 long long current_timestamp() {
     struct timeval te; 
@@ -48,7 +52,7 @@ long long current_timestamp() {
 }
 void readConfiguration(double *amp, double *bias){
     //File with configuration of each pA
-    char *path = "./config/calibration.conf";
+    char path[] = "./config/calibration.conf";
     int start_line = 0;
 
     char line[MAX_LINE_LENGTH] = {0};
@@ -98,13 +102,47 @@ void readConfiguration(double *amp, double *bias){
         perror(path);
     }
 }
+string convertToString(char* a, int size)
+{
+  // Converts character array
+  // to string and returns it
+  int i;
+  string s = "";
+  for (i = 0; i < size; i++) {
+      s = s + a[i];
+  }
+  return s;
+}
 
+static string nextWord(string &S, string &word)
+{
+  //Finds the next word in a line
+  static char delimiters[] = " :\n\t\r";
+  string re;
+  string::size_type   p1 = 0, p2 = 0;
+  p1 = S.find(word)+word.length();
+  if (p1 == string::npos) 
+      return "";
+  p2 = S.find_first_of(delimiters, p1);
+  re = S.substr(p1, (p2 - p1));
+
+  return re;
+}
 string communicate_pAs(libusb_device_handle *handle, double *amp, double *bias){
   //   Communicate     
   printf("Communicate \n");
   FILE* fptr;
   if(savefile){
-      if( access( filename, F_OK ) == 0 ) {
+
+    int n = filename.length();
+ 
+    // declaring character array
+    char char_filename[n + 1];
+ 
+    // copying the contents of the
+    // string to char array
+    strcpy(char_filename, filename.c_str());
+      if( access( char_filename, F_OK ) == 0 ) {
           // file exists
           printf("File %s Exists !! \n",filename);
           printf("Please use different File name. \n",filename);
@@ -113,7 +151,7 @@ string communicate_pAs(libusb_device_handle *handle, double *amp, double *bias){
       } else {
           // file doesn't exist
           printf("Create NEW File: %s \n",filename);
-          fptr=fopen(filename, "a+");
+          fptr=fopen(char_filename, "a+");
       }
   }
   //std::stringstream ss;
@@ -202,7 +240,7 @@ int main( int argc, char *argv[])
   char buffer[MAXLINE];
   struct sockaddr_in servaddr, cliaddr;
 
-  const char *reply = "Thank you";
+  char *reply;
   
   // Creating socket file descriptor
   if ( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 )
@@ -412,24 +450,53 @@ int main( int argc, char *argv[])
     for ( int i = 0; i < n; i++){
 	    cout << i << " " << hex << setw(3) << int(buffer[i]) << dec;
 	    if ( buffer[i] >= 32 ) cout << "  " << buffer[i];  // printable char
-
+        cout << endl;
 	  }
-    if (n>0){
+            
+    string buff_str = convertToString(buffer,sizeof(buffer) / sizeof(char));
+    //cout<<buff_str<<endl;
+    if (buff_str.find("current")==true){
       string str = communicate_pAs(handle, amp, bias);
-	    sleep(sleeptime);
-      cout<<str<<endl;
+	    //sleep(sleeptime);
+      //cout<<str<<endl;
       reply = &str[0];   
       write (in_fd, reply, strlen(reply) +1);
     }
-    write (in_fd, reply, strlen(reply) +1);
+    string s_file = "file:";
+    if (buff_str.find(s_file)==true){
+      string file_name = nextWord(buff_str, s_file);
+      filename = file_name;
+      string str = "File: " + filename;
+      reply = &str[0];   
+      write (in_fd, reply, strlen(reply) +1);
+    }
+    string s_time = "time:";
+    if (buff_str.find(s_time)==true){
+      string time_sec = nextWord(buff_str, s_time);
+      string str = "t= " + time_sec;
+      tsec = stoi(time_sec);
+      reply = &str[0];   
+      write (in_fd, reply, strlen(reply) +1);        
+    }
+    string s_write = "write";
+    if (buff_str.find(s_write)==true){
+      ofstream out_file;
+      out_file.open ("example.txt");
+      for (int t=0;t<tsec;t++){
+        string str = communicate_pAs(handle, amp, bias)+"\n";
+        out_file << str;
+        sleep(sleeptime);
+      }
+      out_file.close();
+    }
     close (in_fd);
     in_fd = 0;
   }
   //swapped = (num>>8) | (num<<8);
-  e = libusb_release_interface(handle, 0);    
+  //e = libusb_release_interface(handle, 0);    
 
-  libusb_close(handle);    
-  libusb_exit(NULL);    
+  //libusb_close(handle);    
+  //libusb_exit(NULL);    
 
   printf("\n");    
 
