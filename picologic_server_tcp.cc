@@ -481,7 +481,7 @@ int main( int argc, char *argv[])
     string s_write = "write";
     if (buff_str.find(s_write)==true){
       ofstream out_file;
-      out_file.open ("example.txt");
+      out_file.open (filename);
       for (int t=0;t<tsec;t++){
         string str = communicate_pAs(handle, amp, bias)+"\n";
         out_file << str;
