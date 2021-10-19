@@ -1,0 +1,1 @@
+g++ picologic_server_tcp.cc -Wformat=0 -o picologic_server_tcp -lusb-1.0
