@@ -16,6 +16,8 @@
 #include <unistd.h>
 #endif
 
+int verbocity=0;
+
 void readConfiguration(double *amp, double *bias);
 
 long long current_timestamp() {
@@ -107,7 +109,7 @@ struct libusb_endpoint_descriptor* active_config(struct libusb_device *dev,struc
 #define MAX_LINE_LENGTH 80
 void readConfiguration(double *amp, double *bias){
     //File with configuration of each pA
-    char *path = "./config/calibration.conf";
+    char *path = "/home/tpc/Products/picologic_libusb/config/calibration.conf";
     int start_line = 0;
 
     char line[MAX_LINE_LENGTH] = {0};
@@ -162,7 +164,7 @@ void readConfiguration(double *amp, double *bias){
 int main(int argc, char **argv)    
 {
     int tsec=100;
-   printf("Setting parameters for the readout");
+    if (verbocity==1) printf("Setting parameters for the readout");
     if(argc==1){
         printf("Default arguments supplied: \n");
       printf("- output File name: %s\n", filename);
@@ -171,10 +173,12 @@ int main(int argc, char **argv)
        if( argc == 3 ) {
            strcpy(filename, argv[1]);
           tsec = atoi(argv[2]);
-          printf("The arguments supplied: \n");
-          printf("- output File name: %s\n", filename);
-          printf("- measurement interval: %d [sec]\n", tsec);
-          //printf("The arguments supplied: is %s\n", argv[2]);
+          if (verbocity==1){
+            printf("The arguments supplied: \n");
+            printf("- output File name: %s\n", filename);
+            printf("- measurement interval: %d [sec]\n", tsec);
+            //printf("The arguments supplied: is %s\n", argv[2]);
+          }
        }
        else if( argc > 3 ) {
           printf("Too many arguments supplied.\n");
@@ -183,26 +187,26 @@ int main(int argc, char **argv)
           printf("Two arguments expected.\n");
        }
     }
-   printf("\n");
+   if (verbocity==1)printf("\n");
    double amp[12];
    double bias[12];
    readConfiguration(amp,bias);
    for(int n=0; n<12;n++){
-       printf("%d %f | %f \n",n,amp[n],bias[n]);
+       if (verbocity==1)printf("%d %f | %f \n",n,amp[n],bias[n]);
    }
     FILE* fptr;
     if(savefile){
         
-        if( access( filename, F_OK ) == 0 ) {
-            // file exists
-            printf("File %s Exists !! \n",filename);
-            printf("Please use different File name. \n",filename);
-            return 1;
-        } else {
+        //if( access( filename, F_OK ) == 0 ) {
+        //    // file exists
+        //    printf("File %s Exists !! \n",filename);
+        //    printf("Please use different File name. \n",filename);
+        //    return 1;
+        //} else {
             // file doesn't exist
-            printf("Create NEW File: %s \n",filename);
+            if (verbocity==1)printf("Append to the File: %s \n",filename);
             fptr=fopen(filename, "a+");
-        }
+        //}
     }
     
     int r = 1;    
@@ -228,7 +232,7 @@ int main(int argc, char **argv)
         return 1;    
     }    
     else    
-        printf("\nInit Successful!\n");    
+        if(verbocity==1)printf("\nInit Successful!\n");    
 
 // Get a list os USB devices    
     cnt = libusb_get_device_list(NULL, &devs);    
@@ -237,7 +241,7 @@ int main(int argc, char **argv)
         printf("\nThere are no USB devices on bus\n");    
         return -1;    
     }    
-    printf("\nDevice Count : %d\n-------------------------------\n",cnt);    
+    if (verbocity==1)printf("\nDevice Count : %d\n-------------------------------\n",cnt);    
 
     //while ((dev = devs[i++]) != NULL)    
     for (int k=0;k<cnt;k++)
@@ -251,26 +255,26 @@ int main(int argc, char **argv)
             libusb_close(handle);    
             break;    
         }    
-
-        printf("\nDevice Descriptors: ");    
-        printf("\n\tVendor ID : %x",desc.idVendor);    
-        printf("\n\tProduct ID : %x",desc.idProduct);    
-        printf("\n\tSerial Number : %x",desc.iSerialNumber);    
-        printf("\n\tSize of Device Descriptor : %d",desc.bLength);    
-        printf("\n\tType of Descriptor : %d",desc.bDescriptorType);    
-        printf("\n\tUSB Specification Release Number : %d",desc.bcdUSB);    
-        printf("\n\tDevice Release Number : %d",desc.bcdDevice);    
-        printf("\n\tDevice Class : %d",desc.bDeviceClass);    
-        printf("\n\tDevice Sub-Class : %d",desc.bDeviceSubClass);    
-        printf("\n\tDevice Protocol : %d",desc.bDeviceProtocol);    
-        printf("\n\tMax. Packet Size : %d",desc.bMaxPacketSize0);    
-        printf("\n\tNo. of Configuraions : %d\n",desc.bNumConfigurations);    
-        
+        if (verbocity==1){
+            printf("\nDevice Descriptors: ");    
+            printf("\n\tVendor ID : %x",desc.idVendor);    
+            printf("\n\tProduct ID : %x",desc.idProduct);    
+            printf("\n\tSerial Number : %x",desc.iSerialNumber);    
+            printf("\n\tSize of Device Descriptor : %d",desc.bLength);    
+            printf("\n\tType of Descriptor : %d",desc.bDescriptorType);    
+            printf("\n\tUSB Specification Release Number : %d",desc.bcdUSB);    
+            printf("\n\tDevice Release Number : %d",desc.bcdDevice);    
+            printf("\n\tDevice Class : %d",desc.bDeviceClass);    
+            printf("\n\tDevice Sub-Class : %d",desc.bDeviceSubClass);    
+            printf("\n\tDevice Protocol : %d",desc.bDeviceProtocol);    
+            printf("\n\tMax. Packet Size : %d",desc.bMaxPacketSize0);    
+            printf("\n\tNo. of Configuraions : %d\n",desc.bNumConfigurations);    
+        }
         if(desc.idVendor == 0x04b4 && desc.idProduct == 0x1003)    
         {    
             found = 1; 
             e = libusb_open(dev,&handle);    
-            printf("return value of openning : %d %s \n", e,libusb_error_name(e));
+            if (verbocity==1)printf("return value of openning : %d %s \n", e,libusb_error_name(e));
         
             if (e < 0)    
             {    
@@ -287,7 +291,7 @@ int main(int argc, char **argv)
             libusb_close(handle);    
             continue;    
             }    
-            printf("\nManufactured : %s",str1);    
+            if (verbocity==1)printf("\nManufactured : %s",str1);    
 
             e = libusb_get_string_descriptor_ascii(handle, desc.iProduct, (unsigned char*) str2, sizeof(str2));    
             if(e < 0)    
@@ -297,8 +301,8 @@ int main(int argc, char **argv)
             continue;    
             }    
         
-            printf("\nProduct : %s",str2);    
-            printf("\n----------------------------------------");    
+            if (verbocity==1)printf("\nProduct : %s",str2);    
+            if (verbocity==1)printf("\n----------------------------------------");    
 
  
             break;    
@@ -316,7 +320,7 @@ int main(int argc, char **argv)
     }    
     else    
     {    
-        printf("\nDevice found\n");    
+        if(verbocity==1)printf("\nDevice found\n");    
         dev_expected = dev;    
         hDevice_expected = handle;    
     }    
@@ -329,7 +333,7 @@ int main(int argc, char **argv)
         libusb_close(handle);    
         return -1;    
     }    
-    printf("\nConfigured value : %d",config2);    
+    if (verbocity==1)printf("\nConfigured value : %d",config2);    
 
     if(config2 != 1)    
     {    
@@ -372,13 +376,13 @@ int main(int argc, char **argv)
         return -1;    
     }    
     else    
-        printf("\nClaimed Interface\n");    
+        if(verbocity==1)printf("\nClaimed Interface\n");    
 
     //active_config(dev_expected,hDevice_expected);    
 
     //   Communicate     
 
-    printf("Communicate \n");
+    if (verbocity==1)printf("Communicate \n");
     char *my_string;
     unsigned short *data_in;
     int *channels;
@@ -473,7 +477,7 @@ int main(int argc, char **argv)
 	if(i%5==0){
 	    time_t T= time(NULL);
             struct  tm tm = *localtime(&T);
-            printf("%04d%02d%02d %02d%02d%02d \n", tm.tm_year+1990, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+            if(verbocity==1)printf("%04d%02d%02d %02d%02d%02d \n", tm.tm_year+1990, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
         }
 	if (i>=tsec) break;        
     }    
@@ -484,7 +488,7 @@ int main(int argc, char **argv)
     libusb_close(handle);    
     libusb_exit(NULL);    
 
-    printf("\n");    
+    if(verbocity==1)printf("\n");    
     if(savefile){
         fclose(fptr);
     }
