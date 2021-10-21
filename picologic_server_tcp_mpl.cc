@@ -71,7 +71,28 @@ vector<string> split (const string &s, char delim) {
 
     return result;
 }
+int AcceptClient(int s, int timeout)
+{
+   int iResult;
+   struct timeval tv;
+   fd_set rfds;
+   FD_ZERO(&rfds);
+   FD_SET(s, &rfds);
 
+   tv.tv_sec = (long)timeout;
+   tv.tv_usec = 0;
+
+   iResult = select(s+1, &rfds, (fd_set *) 0, (fd_set *) 0, &tv);
+   if(iResult > 0)
+   {
+      return accept(s, NULL, NULL);
+   }
+   else
+   {
+     //always here
+   }
+   return 0;
+}
 void readConfiguration(double *amp, double *bias){
     //File with configuration of each pA
     char path[] = "./config/calibration.conf";
@@ -321,6 +342,337 @@ vector<float> communicate_pAs_v(libusb_device_handle *handle, double *amp, doubl
 
 int main( int argc, char *argv[])
 {
+
+    int tsec=100;
+
+  printf("Setting parameters for the readout");
+
+  printf("\n");
+
+  double amp[12];
+
+  double bias[12];
+
+  readConfiguration(amp,bias);
+
+  //for(int n=0; n<12;n++){
+
+    //printf("%d %f | %f \n",n,amp[n],bias[n]);
+
+  //}
+
+
+
+
+
+    
+
+  int r = 1;    
+
+  struct libusb_device **devs;    
+
+  struct libusb_device_handle *handle = NULL, *hDevice_expected = NULL;    
+
+  struct libusb_device *dev,*dev_expected;    
+
+
+
+  struct libusb_device_descriptor desc;    
+
+  struct libusb_endpoint_descriptor *epdesc;    
+
+  struct libusb_interface_descriptor *intdesc;    
+
+  
+
+  ssize_t cnt;    
+
+  int e = 0,config2;    
+
+  int ind = 0,index,j=0;    
+
+  char str1[64], str2[64];    
+
+  char found = 0;    
+
+
+
+  // Init libusb     
+
+  r = libusb_init(NULL);    
+
+  if(r < 0)    
+
+  {    
+
+    printf("\nfailed to initialise libusb\n");    
+
+    return 1;    
+
+  }    
+
+  else
+
+    printf("\nInit Successful!\n");    
+
+
+
+  // Get a list os USB devices    
+
+  cnt = libusb_get_device_list(NULL, &devs);    
+
+  if (cnt < 0)    
+
+  {    
+
+      printf("\nThere are no USB devices on bus\n");    
+
+      return -1;    
+
+  }    
+
+  printf("\nDevice Count : %d\n-------------------------------\n",cnt);    
+
+
+
+  //while ((dev = devs[i++]) != NULL)    
+
+  for (int k=0;k<cnt;k++)
+
+  {    
+
+      dev = devs[k];
+
+      r = libusb_get_device_descriptor(dev, &desc);    
+
+      if (r < 0){
+
+        printf("failed to get device descriptor\n");    
+
+        libusb_free_device_list(devs,1);    
+
+        libusb_close(handle);    
+
+        break;    
+
+      }    
+
+
+
+      printf("\nDevice Descriptors: ");    
+
+      printf("\n\tVendor ID : %x",desc.idVendor);    
+
+      printf("\n\tProduct ID : %x",desc.idProduct);    
+
+      printf("\n\tSerial Number : %x",desc.iSerialNumber);    
+
+      printf("\n\tSize of Device Descriptor : %d",desc.bLength);    
+
+      printf("\n\tType of Descriptor : %d",desc.bDescriptorType);    
+
+      printf("\n\tUSB Specification Release Number : %d",desc.bcdUSB);    
+
+      printf("\n\tDevice Release Number : %d",desc.bcdDevice);    
+
+      printf("\n\tDevice Class : %d",desc.bDeviceClass);    
+
+      printf("\n\tDevice Sub-Class : %d",desc.bDeviceSubClass);    
+
+      printf("\n\tDevice Protocol : %d",desc.bDeviceProtocol);    
+
+      printf("\n\tMax. Packet Size : %d",desc.bMaxPacketSize0);    
+
+      printf("\n\tNo. of Configuraions : %d\n",desc.bNumConfigurations);    
+
+        
+
+      if(desc.idVendor == 0x04b4 && desc.idProduct == 0x1003){    
+
+        found = 1; 
+
+        e = libusb_open(dev,&handle);    
+
+        printf("return value of openning : %d %s \n", e,libusb_error_name(e));
+
+      
+
+        if (e < 0){    
+
+          printf("error opening device\n");    
+
+          libusb_free_device_list(devs,1);    
+
+          libusb_close(handle);    
+
+          break;    
+
+        }  
+
+
+
+        e = libusb_get_string_descriptor_ascii(handle, desc.iManufacturer, (unsigned char*) str1, sizeof(str1));    
+
+        if (e < 0){
+
+          libusb_free_device_list(devs,1);    
+
+          libusb_close(handle);    
+
+          continue;    
+
+        }    
+
+        printf("\nManufactured : %s",str1);    
+
+
+
+        e = libusb_get_string_descriptor_ascii(handle, desc.iProduct, (unsigned char*) str2, sizeof(str2));    
+
+        if(e < 0){    
+
+          libusb_free_device_list(devs,1);    
+
+          libusb_close(handle);    
+
+          continue;    
+
+        }    
+
+      
+
+        printf("\nProduct : %s",str2);    
+
+        printf("\n----------------------------------------");    
+
+ 
+
+        break;    
+
+      }else{
+
+        continue;
+
+      }   
+
+  }//end of for loop
+
+    
+
+  if(found == 0){    
+
+    printf("\nDevice NOT found\n");    
+
+    libusb_free_device_list(devs,1);    
+
+    libusb_close(handle);    
+
+    return 1;    
+
+  }else{    
+
+    printf("\nDevice found\n");    
+
+    dev_expected = dev;    
+
+    hDevice_expected = handle;    
+
+  }    
+
+
+
+  e = libusb_get_configuration(handle,&config2);    
+
+  if(e!=0){    
+
+    printf("\n***Error in libusb_get_configuration\n");    
+
+    libusb_free_device_list(devs,1);    
+
+    libusb_close(handle);    
+
+    return -1;    
+
+  }    
+
+  printf("\nConfigured value : %d",config2);    
+
+
+
+  if(config2 != 1){    
+
+    libusb_set_configuration(handle, 1);    
+
+    if(e!=0)    
+
+    {    
+
+        printf("Error in libusb_set_configuration\n");    
+
+        libusb_free_device_list(devs,1);    
+
+        libusb_close(handle);    
+
+        return -1;    
+
+    }    
+
+    else    
+
+        printf("\nDevice is in configured state!");    
+
+  }    
+
+
+
+  libusb_free_device_list(devs, 1);    
+
+
+
+  if(libusb_kernel_driver_active(handle, 0) == 1)    
+
+  {    
+
+    printf("\nKernel Driver Active");    
+
+    if(libusb_detach_kernel_driver(handle, 0) == 0)    
+
+      printf("\nKernel Driver Detached!");    
+
+    else{    
+
+      printf("\nCouldn't detach kernel driver!\n");    
+
+      libusb_free_device_list(devs,1);    
+
+      libusb_close(handle);    
+
+      return -1;    
+
+    }    
+
+  }    
+
+
+
+  e = libusb_claim_interface(handle, 0);    
+
+  if(e < 0){    
+
+    printf("\nCannot Claim Interface");    
+
+    libusb_free_device_list(devs,1);    
+
+    libusb_close(handle);    
+
+    return -1;    
+
+  }    
+
+  else    
+
+    printf("\nClaimed Interface\n");    
+  //Open server
   int sockfd;
   int in_fd;
   int i;
@@ -354,226 +706,69 @@ int main( int argc, char *argv[])
   listen(sockfd, 1);
   
   
-  int tsec=100;
-  printf("Setting parameters for the readout");
-  printf("\n");
-  double amp[12];
-  double bias[12];
-  readConfiguration(amp,bias);
-  for(int n=0; n<12;n++){
-    printf("%d %f | %f \n",n,amp[n],bias[n]);
-  }
-
-
-    
-  int r = 1;    
-  struct libusb_device **devs;    
-  struct libusb_device_handle *handle = NULL, *hDevice_expected = NULL;    
-  struct libusb_device *dev,*dev_expected;    
-
-  struct libusb_device_descriptor desc;    
-  struct libusb_endpoint_descriptor *epdesc;    
-  struct libusb_interface_descriptor *intdesc;    
-  
-  ssize_t cnt;    
-  int e = 0,config2;    
-  int ind = 0,index,j=0;    
-  char str1[64], str2[64];    
-  char found = 0;    
-
-  // Init libusb     
-  r = libusb_init(NULL);    
-  if(r < 0)    
-  {    
-    printf("\nfailed to initialise libusb\n");    
-    return 1;    
-  }    
-  else
-    printf("\nInit Successful!\n");    
-
-  // Get a list os USB devices    
-  cnt = libusb_get_device_list(NULL, &devs);    
-  if (cnt < 0)    
-  {    
-      printf("\nThere are no USB devices on bus\n");    
-      return -1;    
-  }    
-  printf("\nDevice Count : %d\n-------------------------------\n",cnt);    
-
-  //while ((dev = devs[i++]) != NULL)    
-  for (int k=0;k<cnt;k++)
-  {    
-      dev = devs[k];
-      r = libusb_get_device_descriptor(dev, &desc);    
-      if (r < 0){
-        printf("failed to get device descriptor\n");    
-        libusb_free_device_list(devs,1);    
-        libusb_close(handle);    
-        break;    
-      }    
-
-      printf("\nDevice Descriptors: ");    
-      printf("\n\tVendor ID : %x",desc.idVendor);    
-      printf("\n\tProduct ID : %x",desc.idProduct);    
-      printf("\n\tSerial Number : %x",desc.iSerialNumber);    
-      printf("\n\tSize of Device Descriptor : %d",desc.bLength);    
-      printf("\n\tType of Descriptor : %d",desc.bDescriptorType);    
-      printf("\n\tUSB Specification Release Number : %d",desc.bcdUSB);    
-      printf("\n\tDevice Release Number : %d",desc.bcdDevice);    
-      printf("\n\tDevice Class : %d",desc.bDeviceClass);    
-      printf("\n\tDevice Sub-Class : %d",desc.bDeviceSubClass);    
-      printf("\n\tDevice Protocol : %d",desc.bDeviceProtocol);    
-      printf("\n\tMax. Packet Size : %d",desc.bMaxPacketSize0);    
-      printf("\n\tNo. of Configuraions : %d\n",desc.bNumConfigurations);    
-        
-      if(desc.idVendor == 0x04b4 && desc.idProduct == 0x1003){    
-        found = 1; 
-        e = libusb_open(dev,&handle);    
-        printf("return value of openning : %d %s \n", e,libusb_error_name(e));
-      
-        if (e < 0){    
-          printf("error opening device\n");    
-          libusb_free_device_list(devs,1);    
-          libusb_close(handle);    
-          break;    
-        }  
-
-        e = libusb_get_string_descriptor_ascii(handle, desc.iManufacturer, (unsigned char*) str1, sizeof(str1));    
-        if (e < 0){
-          libusb_free_device_list(devs,1);    
-          libusb_close(handle);    
-          continue;    
-        }    
-        printf("\nManufactured : %s",str1);    
-
-        e = libusb_get_string_descriptor_ascii(handle, desc.iProduct, (unsigned char*) str2, sizeof(str2));    
-        if(e < 0){    
-          libusb_free_device_list(devs,1);    
-          libusb_close(handle);    
-          continue;    
-        }    
-      
-        printf("\nProduct : %s",str2);    
-        printf("\n----------------------------------------");    
- 
-        break;    
-      }else{
-        continue;
-      }   
-  }//end of for loop
-    
-  if(found == 0){    
-    printf("\nDevice NOT found\n");    
-    libusb_free_device_list(devs,1);    
-    libusb_close(handle);    
-    return 1;    
-  }else{    
-    printf("\nDevice found\n");    
-    dev_expected = dev;    
-    hDevice_expected = handle;    
-  }    
-
-  e = libusb_get_configuration(handle,&config2);    
-  if(e!=0){    
-    printf("\n***Error in libusb_get_configuration\n");    
-    libusb_free_device_list(devs,1);    
-    libusb_close(handle);    
-    return -1;    
-  }    
-  printf("\nConfigured value : %d",config2);    
-
-  if(config2 != 1){    
-    libusb_set_configuration(handle, 1);    
-    if(e!=0)    
-    {    
-        printf("Error in libusb_set_configuration\n");    
-        libusb_free_device_list(devs,1);    
-        libusb_close(handle);    
-        return -1;    
-    }    
-    else    
-        printf("\nDevice is in configured state!");    
-  }    
-
-  libusb_free_device_list(devs, 1);    
-
-  if(libusb_kernel_driver_active(handle, 0) == 1)    
-  {    
-    printf("\nKernel Driver Active");    
-    if(libusb_detach_kernel_driver(handle, 0) == 0)    
-      printf("\nKernel Driver Detached!");    
-    else{    
-      printf("\nCouldn't detach kernel driver!\n");    
-      libusb_free_device_list(devs,1);    
-      libusb_close(handle);    
-      return -1;    
-    }    
-  }    
-
-  e = libusb_claim_interface(handle, 0);    
-  if(e < 0){    
-    printf("\nCannot Claim Interface");    
-    libusb_free_device_list(devs,1);    
-    libusb_close(handle);    
-    return -1;    
-  }    
-  else    
-    printf("\nClaimed Interface\n");    
 
 	int ax_n = 100;
 	std::vector<double> x, y, z;
   std::vector<double> currents[12];
   int ix=0;
-  //Waiting commands from the client 
-  unsigned int len, n;
   float x_min=0;
   float x_max=ax_n;
   int step=0;
+
+  //Waiting commands from the client 
+  unsigned int len, n;
+
   while (sockfd > 0){
     vector<float> out_currents;// = communicate_pAs_v(handle, amp, bias);
-    bool plot_f=true;
-    while (plot_f){
-
-      out_currents = communicate_pAs_v(handle, amp, bias);
-      ix++;
-      sleep(sleeptime);
-
-      x.push_back(ix);
-      // Clear previous plot
-		  plt::clf();  
-      int shift = ix/ax_n;
-      if(step!=shift){
-        x_min+=10*shift;
-        x_max+=10*shift;   
-        step=shift;
-      }
-      //cout<<shift<<" "<<x_min<<" : "<<x_max<<endl; 
-		  // Plot lines. Color is selected automatically.
+    //bool plot_f=true;
+    //while (plot_f){
+//
+    out_currents = communicate_pAs_v(handle, amp, bias);
+    ix++;
+//    //  sleep(sleeptime);
+//
+    if(x.size()>1000){
+      x.clear();
       for(int c=0;c<12;c++){
-        currents[c].push_back(out_currents[c]);
-        char name[10];
-        snprintf(name, sizeof(name), "%d", c);
-        plt::named_plot(name,x, currents[c]);
-        // Set x-axis to interval [0,1000000]
-  	    plt::xlim(x_min, x_max);
+        currents[c].clear();
       }
-      
-
-
-  	  // Add graph title
-		  //plt::title("Sample figure");
-		  // Enable legend.
-		  plt::legend();
-		  // Display plot continuously
-		  plt::pause(0.01);
     }
+    x.push_back(ix);
+//// Clear previous plot
+    plt::clf();  
+    int shift = ix/ax_n;
+    if(step!=shift){
+      x_min+=10*shift;
+      x_max+=10*shift;   
+      step=shift;
+    }
+    //  //cout<<shift<<" "<<x_min<<" : "<<x_max<<endl; 
+	  // Plot lines. Color is selected automatically.
+    for(int c=0;c<12;c++){
+      currents[c].push_back(out_currents[c]);
+      char name[10];
+      snprintf(name, sizeof(name), "%d", c);
+      plt::named_plot(name,x, currents[c]);
+      // Set x-axis to interval [0,1000000]
+      plt::xlim(x_min, x_max);
+    }
+    
+//
+//
+  	//  // Add graph title
+		//  //plt::title("Sample figure");
+		//  // Enable legend.
+		plt::legend();
+		//  // Display plot continuously
+		plt::pause(0.01);
+    //}
 
     len = sizeof(cliaddr); 
     memset(&cliaddr, 0, sizeof(cliaddr));
 
-    in_fd = accept(sockfd,  (struct sockaddr *) &cliaddr, &len);
-
-    if ( in_fd < 0){
+    in_fd = AcceptClient(sockfd, 1);
+    //in_fd = accept(sockfd,  (struct sockaddr *) &cliaddr, &len);
+    if ( in_fd <= 0){
 	    continue;
 	  }
 	
