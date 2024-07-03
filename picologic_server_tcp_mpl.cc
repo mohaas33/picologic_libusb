@@ -774,13 +774,13 @@ int main( int argc, char *argv[])
 	
     n = read ( in_fd, buffer, MAXLINE);
     for ( int i = 0; i < n; i++){
-	    cout << i << " " << hex << setw(3) << int(buffer[i]) << dec;
+      cout << i << " " << hex << setw(3) << int(buffer[i]) << dec;
 	    if ( buffer[i] >= 32 ) cout << "  " << buffer[i];  // printable char
         cout << endl;
 	  }
             
     string buff_str = convertToString(buffer,sizeof(buffer) / sizeof(char));
-    //cout<<buff_str<<endl;
+    //cout<<"Sir, this is your buffer string" << buff_str <<endl;
     if (buff_str.find("current")==true){
       string str = communicate_pAs(handle, amp, bias);
       reply = &str[0];   
@@ -796,6 +796,7 @@ int main( int argc, char *argv[])
     }
     string s_time = "time:";
     if (buff_str.find(s_time)==true){
+      cout << "Dude, you typed time" << endl;
       string time_sec = nextWord(buff_str, s_time);
       string str = "t= " + time_sec;
       tsec = stoi(time_sec);

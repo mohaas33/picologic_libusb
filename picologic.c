@@ -109,7 +109,7 @@ struct libusb_endpoint_descriptor* active_config(struct libusb_device *dev,struc
 #define MAX_LINE_LENGTH 80
 void readConfiguration(double *amp, double *bias){
     //File with configuration of each pA
-    char *path = "/home/tpc/Products/picologic_libusb/config/calibration.conf";
+    char *path = "/home/mollergem/Products/picologic_libusb/config/calibration.conf";
     int start_line = 0;
 
     char line[MAX_LINE_LENGTH] = {0};

@@ -2,12 +2,12 @@
 
 INTERFACE = 0
 TIMEOUT=0
-BUFFER_SIZE=512
+BUFFER_SIZE=51200
 
 from ctypes import byref, create_string_buffer
 import usb1
 import struct
-import tkinter
+#import Tkinter
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -34,7 +34,8 @@ def readConf():
 
             
 def read_pAs(amp,bias):
-   currents = [] 
+   currents = []
+   num      = []
    data=create_string_buffer(BUFFER_SIZE)
 
    #channels = (int *)malloc(64); 
@@ -47,27 +48,37 @@ def read_pAs(amp,bias):
          # Do stuff with endpoints on claimed interface.
          #while True:
          e = handle._bulkTransfer( 0x82, data, BUFFER_SIZE,TIMEOUT)
-         #print('Process data.')
          data_f=0
-         k=0
-         for i in range(0,511,2):
+
+         # Reset the averaging and counting arrays
+         for k in range(0,12,1):
+            currents.append(0)
+            num.append(0)
+
+         # Loop over the final 500 reads (should contain about 100 "events")
+         for i in range(BUFFER_SIZE-5000,BUFFER_SIZE-52,2):
             c_2bits = struct.unpack('<H', bytes(data[i:i+2]))
             c=c_2bits[0]
             if c==0xfefe :
                data_f=1
-               k=0
-            
-            elif data_f==1 and k<12:
-               #print(hex(c))
-               temp = int((c<<8|c>>8))&0xffff 
-               chn = temp-0x8000
-               currents.append(amp[k]*float(chn)-bias[k])
-               k+=1
-               i+=1
-            if k==12:
-               data_f=0
-               break
-      
+            elif data_f==1:
+               for k in range(0,12,1):
+                  # Store up the present "c"
+                  temp = int((c<<8|c>>8))&0xffff 
+                  chn = temp-0x8000
+                  currents[k] = currents[k] + (amp[k]*float(chn)-bias[k])
+                  num[k] = num[k] + 1
+                  # Advance to the next "c"
+                  i+=2
+                  c_2bits = struct.unpack('<H', bytes(data[i:i+2]))
+                  c=c_2bits[0]
+               # Reset the found marker flag...
+               data_f = 0
+
+         #  Finally do teh division so as to take the average(s)
+         for k in range(0,12,1):
+            #print(k, " ", currents[k], " ", num[k], " ", currents[k]/num[k]) 
+            currents[k] = currents[k]/num[k]
                      
    return currents 
 

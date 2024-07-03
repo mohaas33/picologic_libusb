@@ -7,6 +7,7 @@ The library is in: `<libusb-1.0/libusb.h>`
 - Build the code:
 `gcc -o picologic -Wformat=0 -Wno-incompatible-pointer-types picologic.c -lusb-1.0`
 `g++ picologic_server_tcp.cc -Wformat=0 -o picologic_server_tcp -lusb-1.0`
+`g++ pa_server.cc -Wformat=0 -o pa_server -lusb-1.0`
 - Run the code:
 `sudo ./test.o DATA.txt 10`
 it takes as an input:
