@@ -7,15 +7,14 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 import time
 import subprocess
 import numpy as np
-#import time
 import datetime
 # importing mean() 
 from statistics import mean 
-
+import os
 # Function to fetch data using netcat command
 def fetch_data():
     try:
-        result = subprocess.getstatusoutput(f'echo bulk | netcat -w 1 -t localhost 50001')
+        result = subprocess.getstatusoutput(f'echo bulk | netcat -w 1 -t localhost 50003')
         lines = result[1].splitlines()
         data = [list(map(float, line[:-1].split(','))) for line in lines]
         return np.array(data), result
@@ -33,6 +32,7 @@ class NumberGeneratorPlotter:
         self.time = []
         self.update_intervals = [500] * 12  # Initial update intervals in milliseconds
         self.writing = False
+        self.server_up = False
         self.file_writer = None
         self.file_name = tk.StringVar()
         self.file_name.set("OutputFile")
@@ -47,8 +47,9 @@ class NumberGeneratorPlotter:
         self.t_min = datetime.datetime.now()
         self.t_max = datetime.datetime.now()
         self.create_widgets()
-        self.start_updates()
-        self.init_plot()
+        #if self.server_up:
+        #    self.start_updates()
+        #self.init_plot()
     
     def create_widgets(self):
         self.labels = []
@@ -64,8 +65,8 @@ class NumberGeneratorPlotter:
             checkbox.grid(row=i, column=1, padx=10, pady=5, sticky='e')
             self.checkboxes.append(var)
 
-        #self.stop_button = tk.Button(self.root, text="Stop Updates", command=self.stop_updates)
-        #self.stop_button.grid(row=12, column=0, columnspan=1, pady=10)
+        self.start_button = tk.Button(self.root, text="Start Server", command=self.start_server)
+        self.start_button.grid(row=0, column=2, columnspan=1, pady=10)
 
         self.zero_currents_button = tk.Button(self.root, text="Zero Currents", command=self.zero_currents)
         self.zero_currents_button.grid(row=12, column=1, columnspan=1, pady=10)
@@ -114,7 +115,20 @@ class NumberGeneratorPlotter:
         self.running = True
         self.update_thread = threading.Thread(target=self.update_currents_thread, daemon=True)
         self.update_thread.start()
-    
+
+    def start_server(self):
+            self.server_up = True
+            result = os.system(". ./start_pa_server.sh")
+            #result = subprocess.getstatusoutput(f'source ./start_pa_server.sh')
+            #time.sleep(1)
+            #print(result)
+            if result==0:
+                self.start_updates()
+                self.init_plot()
+        #self.running = False
+        #self.root.after_cancel(self.update_id)
+        #self.update_thread.join()
+
     #def stop_updates(self):
     #    self.running = False
     #    self.root.after_cancel(self.update_id)

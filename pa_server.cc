@@ -15,7 +15,7 @@
 #include <unistd.h>
 #endif
 
-#define PORT  50001
+#define PORT  50003
 #define MAXLINE (1024*2)
 
 bool savefile = false;
